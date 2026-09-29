@@ -38,58 +38,6 @@
 1. Закрой игру и скачай `nidin.onslaught_recon_bounds_1.2.4.mtmod`
    из [релиза 1.2.4](https://github.com/xNIDINx/onslaught-recon-bounds/releases/tag/v1.2.4).
 2. Удали прежнюю версию этого мода из папки `mods/1.45.0.0` клиента.
-   Старые пакеты назывались `nidin.onslaught_recon_*.mtmod`
-   или `nidin.onslaught_recon_bounds_*.mtmod`.
 3. Скопируй скачанный `.mtmod` в `mods/1.45.0.0` и запусти игру.
 
 Для удаления закрой игру и убери этот `.mtmod` из папки модов.
-Совместимость с другими версиями клиента не проверена.
-
-## Сборка из исходников
-
-Нужны Windows PowerShell, Python 2.7, Java, Apache Flex SDK 4.16.1,
-PlayerGlobal для Flash Player 32 и библиотека API игры `wot-game-api.swc`.
-SDK и библиотеки игры в репозиторий не включены. Помести зависимости
-в папку `external` либо укажи свою папку через `-ExternalTools`:
-
-```text
-external/
-  apache-flex-sdk-4.16.1/
-    lib/mxmlc.jar
-    frameworks/
-  playerglobal/
-    32.0/playerglobal.swc
-  wot-game-api.swc
-```
-
-```powershell
-./build.ps1 -Python C:/Python27/python.exe -ExternalTools ./external
-```
-
-Результат — `.mtmod` и контрольная сумма SHA256 в `dist`.
-Упаковщик `tools/package_mtmod.py` создаёт ZIP_STORED с явным списком файлов:
-метаданные, шесть модулей Python 2.7 и SWF контура дымов.
-
-При закрытом клиенте можно установить собранный пакет скриптом:
-
-```powershell
-./tools/install.ps1 -ClientRoot 'C:/Games/Tanki'
-```
-
-Скрипт проверяет версию клиента, сохраняет предыдущий пакет в резервную копию
-и сверяет SHA256 после установки.
-
-## Тесты
-
-```powershell
-$env:TANKI_SCRIPTS_PKG = 'C:/Games/Tanki/res/packages/scripts.pkg'
-& C:/Python27/python.exe -B -m unittest discover -s tests -p 'test_*.py' -v
-```
-
-57 тестов проверяют геометрию, жизненный цикл областей и совместную работу
-лампы от самолёта со штатной лампой. Для проверки API клиента требуется локальный
-`scripts.pkg`. Игровые файлы не распространяются вместе с тестами.
-Автотесты не измеряют FPS и не заменяют
-проверку отображения в клиенте.
-
-Технический идентификатор мода: `nidin.onslaught_recon_bounds`.
