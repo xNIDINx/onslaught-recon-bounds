@@ -1,0 +1,6 @@
+external/
+build-artifacts/
+dist/
+__pycache__/
+*.pyc
+*.pyo
