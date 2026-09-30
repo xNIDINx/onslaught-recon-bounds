@@ -18,6 +18,7 @@ class SmokeTests(unittest.TestCase):
         module('gui.mods.nidin_smoke_ui',set_contours=lambda *a:self.frames.append(a),clear=lambda:self.frames.append(None))
         geometry=imp.load_source('geometry_tested',os.path.join(SOURCE,'nidin_smoke_geometry.py'))
         module('gui.mods.nidin_smoke_geometry',boundary_arcs=geometry.boundary_arcs,
+               priority_boundary_arcs=geometry.priority_boundary_arcs,
                polylines_from_arcs=geometry.polylines_from_arcs)
         owner=self
         class Terrain(object):
@@ -51,17 +52,19 @@ class SmokeTests(unittest.TestCase):
         self.now=120;self.tick()
         self.assertFalse(self.callbacks or self.smoke.circles)
         self.assertEqual(self.frames[-1][0],[])
-    def test_overlap_one_team_removes_duplicate_but_keeps_enemy(self):
+    def test_duplicates_merge_and_equal_enemy_timestamp_is_unknown(self):
         self.smoke._onSmoke({1:self.args,2:self.args})
         self.assertEqual(len(self.frames[-1][0]),1)
         self.smoke._onSmoke({3:self.args[:-1]+(1,)})
-        self.assertEqual(len(self.frames[-1][0]),2)
-    def test_terrain_uses_three_meters_while_minimap_keeps_one(self):
+        self.assertEqual(len(self.frames[-1][0]),1)
+        self.assertEqual(self.frames[-1][0][0][0],0)
+    def test_both_layers_share_three_meter_polylines(self):
         self.now=102
         self.smoke._onSmoke({1:self.args})
         minimap=self.frames[-1][0]
         terrain=self.terrain_frames[-1][0]
-        self.assertEqual(sum(len(p)-1 for team,p in minimap),236)
+        self.assertEqual(sum(len(p)-1 for team,p in minimap),79)
+        self.assertIs(minimap,terrain)
         self.assertEqual(sum(len(p)-1 for team,p in terrain),79)
         self.assertEqual(minimap[0][1][0],terrain[0][1][0])
         self.assertEqual(minimap[0][1][-1],terrain[0][1][-1])
@@ -109,5 +112,39 @@ class SmokeTests(unittest.TestCase):
         self.smoke._onSmoke({1:self.args})
         self.assertTrue(self.terrain_frames)
         self.assertTrue(self.callbacks)
+
+    def test_later_server_time_wins_even_if_delivered_first(self):
+        self.now=105
+        older=(9403,(1,2,3),100,120,2)
+        newer=(9403,(1,2,3),101,110,1)
+        self.smoke._onSmoke({1:newer})
+        self.smoke._onSmoke({99:older})
+        self.assertEqual(set(team for team,points in self.frames[-1][0]),{1})
+        self.assertEqual(set(team for team,points in self.terrain_frames[-1][0]),{1})
+        self.smoke._onSmoke({99:older})
+        self.assertEqual(set(team for team,points in self.frames[-1][0]),{1})
+        self.now=110; self.tick()
+        self.assertEqual(set(team for team,points in self.frames[-1][0]),{2})
+
+    def test_removal_restores_hidden_older_disk(self):
+        self.now=105
+        self.smoke._onSmoke({1:self.args,2:(9403,(1,2,3),101,120,1)})
+        self.assertEqual(set(team for team,points in self.frames[-1][0]),{1})
+        self.smoke._onSmoke({2:None})
+        self.assertEqual(set(team for team,points in self.frames[-1][0]),{2})
+
+    def test_timestamp_change_rebuilds_even_when_radius_is_unchanged(self):
+        self.now=105
+        self.smoke._onSmoke({1:self.args,2:(9403,(1,2,3),101,120,1)})
+        self.smoke._onSmoke({1:(9403,(1,2,3),102,120,2)})
+        self.assertEqual(set(team for team,points in self.frames[-1][0]),{2})
+
+    def test_future_smoke_does_not_override_until_start(self):
+        self.now=105
+        self.smoke._onSmoke({1:self.args,2:(9403,(1,2,3),110,120,1)})
+        self.assertEqual(set(team for team,points in self.frames[-1][0]),{2})
+        self.assertEqual(self.callbacks[self.smoke.callback][0],5)
+        self.now=110;self.tick()
+        self.assertEqual(set(team for team,points in self.frames[-1][0]),{1,2})
 
 if __name__=='__main__':unittest.main()

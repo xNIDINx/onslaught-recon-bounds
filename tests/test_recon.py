@@ -94,15 +94,13 @@ class ReconTests(unittest.TestCase):
         self.bw = module('BigWorld', player=lambda: self.player, serverTime=lambda: 100,
                          callback=self.callback, cancelCallback=lambda i: self.callbacks.pop(i),
                          entities={7:self.vehicle}, screenWidth=lambda:1920,screenHeight=lambda:1080)
-        self.ui = module('gui.mods.nidin_recon_ui',visible=False,start=lambda:None,stop=lambda:None,
-                         install=lambda:None,uninstall=lambda:None)
-        self.ui.set_warning = lambda visible:setattr(self.ui,'visible',bool(visible))
         module('Math', Vector2=Vector, Vector3=Vector, Matrix=Matrix)
         module('constants', ARENA_SYNC_OBJECTS=Obj(SMOKE=7))
         module('items.vehicles', g_cache=Obj(equipments=lambda:{}))
         module('gui.mods.nidin_smoke_ui', clear=lambda:None, set_contours=lambda *a:None)
         geometry = imp.load_source('geometry_tested', os.path.join(os.path.dirname(SOURCE), 'nidin_smoke_geometry.py'))
         module('gui.mods.nidin_smoke_geometry', boundary_arcs=geometry.boundary_arcs,
+               priority_boundary_arcs=geometry.priority_boundary_arcs,
                polylines_from_arcs=geometry.polylines_from_arcs)
         module('gui.mods.nidin_smoke_terrain', TerrainOutline=lambda:Obj(update=lambda *a:None,destroy=lambda:None))
         module('CombatSelectedArea', DEFAULT_RADIUS_MODEL='native.visual')
@@ -298,34 +296,7 @@ class ReconTests(unittest.TestCase):
         self.assertIn('radius',event.co_names)
         self.assertIn('duration',event.co_names)
 
-    def tick_warning(self):
-        _, callback = self.callbacks.pop(self.plugin._warning_callback)
-        callback()
-
-    def test_warning_appears_on_entry_and_hides_on_exit(self):
-        self.fire(team=2)
-        self.assertFalse(self.ui.visible)
-        self.vehicle.position = self.position
-        self.tick_warning()
-        self.assertTrue(self.plugin._warning.visible)
-        self.assertTrue(self.ui.visible)
-        self.vehicle.position = Vector(1000,5,-90)
-        self.tick_warning()
-        self.assertFalse(self.plugin._warning.visible)
-        self.assertFalse(self.ui.visible)
-
-    def test_video_camera_hides_area_warning(self):
-        self.vehicle.position = self.position
-        self.fire(team=2)
-        self.assertTrue(self.ui.visible)
-        self.player.inputHandler.ctrlModeName = 'video'
-        self.tick_warning()
-        self.assertFalse(self.ui.visible)
-        self.player.inputHandler.ctrlModeName = 'sniper'
-        self.tick_warning()
-        self.assertTrue(self.ui.visible)
-
-    def test_smoke_never_activates_recon_lamp(self):
+    def test_smoke_and_recon_lifecycles_are_independent(self):
         smoke_equipment = Obj(name='poi_smoke',startRadius=10,expandedRadius=37.5,expansionDuration=2)
         sys.modules['items.vehicles'].g_cache.equipments = lambda:{9403:smoke_equipment}
         handlers = []
@@ -335,8 +306,7 @@ class ReconTests(unittest.TestCase):
         self.plugin._smoke.start()
         self.plugin._smoke._onSmoke({1:(9403,(0,0,0),100,120,2)})
         self.assertEqual(len(self.plugin._smoke.circles),1)
-        self.assertFalse(self.ui.visible or self.plugin._areas)
-        self.assertIsNone(self.plugin._warning_callback)
+        self.assertFalse(self.plugin._areas)
         self.warp()
         self.assertFalse(handlers or self.plugin._smoke.circles or self.callbacks)
         self.warp_finish()
@@ -344,101 +314,42 @@ class ReconTests(unittest.TestCase):
         self.plugin.stop()
         self.assertFalse(handlers or self.warp_finish)
 
-    def test_own_plane_never_creates_warning_timer_or_lamp(self):
+    def test_recon_only_schedules_expiry_even_when_tank_is_inside(self):
         self.vehicle.position = self.position
-        self.fire(team=1)
-        self.assertIsNone(self.plugin._warning_callback)
-        self.assertFalse(self.ui.visible)
-
-    def test_native_enemy_team_zero_is_supported(self):
-        self.vehicle.position = self.position
-        self.fire(team=0)
-        self.assertTrue(self.plugin._warning.visible)
-
-    def test_tangent_and_height_are_handled_in_map_plane(self):
-        self.vehicle.position = Vector(155,1000,-90)
-        self.fire(team=2)
-        self.assertTrue(self.plugin._warning.visible)
-        self.vehicle.position = Vector(155.01,-1000,-90)
-        self.tick_warning()
-        self.assertFalse(self.plugin._warning.visible)
-
-    def test_warning_uses_own_vehicle_not_spectator_target(self):
-        self.bw.entities[9] = Obj(health=1000,position=self.position)
-        self.player.getVehicleAttached = lambda:self.bw.entities[9]
-        self.fire(team=2)
-        self.assertFalse(self.ui.visible)
-        self.vehicle.position = self.position
-        self.tick_warning()
-        self.assertTrue(self.plugin._warning.visible)
-
-    def test_death_missing_vehicle_and_hidden_gui_hide_warning(self):
-        self.vehicle.position = self.position
-        self.fire(team=2)
-        self.vehicle.health = 0
-        self.tick_warning()
-        self.assertFalse(self.plugin._warning.visible)
-        self.vehicle.health = 1000
-        self.player.isVehicleAlive = False
-        self.tick_warning()
-        self.assertFalse(self.plugin._warning.visible)
-        self.player.isVehicleAlive = True
-        self.player.inputHandler.isGuiVisible = False
-        self.tick_warning()
-        self.assertFalse(self.plugin._warning.visible)
-        self.player.inputHandler.isGuiVisible = True
-        del self.bw.entities[7]
-        self.tick_warning()
-        self.assertFalse(self.plugin._warning.visible)
-
-    def test_unknown_player_team_never_warns(self):
-        self.vehicle.position = self.position
-        self.player.team = 0
-        self.fire(team=2)
-        self.assertFalse(self.ui.visible)
-        self.assertIsNone(self.plugin._warning_callback)
-
-    def test_overlapping_enemy_areas_keep_one_lamp_until_last_removed(self):
-        self.vehicle.position = self.position
-        self.fire(team=2)
-        self.position = Vector(101,5,-90)
-        self.fire(team=2)
-        self.assertTrue(self.ui.visible)
-        self.assertEqual(len(self.callbacks),3)  # Two expiry timers and one position check.
-        self.plugin._remove(1)
-        self.assertTrue(self.plugin._warning.visible)
-        self.plugin._remove(2)
-        self.assertIsNone(self.plugin._warning)
-        self.assertFalse(self.ui.visible or self.callbacks)
-
-    def test_warning_expiry_stop_and_rewind_hide_ui_and_cancel_callbacks(self):
-        self.vehicle.position = self.position
-        self.fire(team=2)
-        _, expire = self.callbacks.pop(self.plugin._areas[1]['callback'])
-        expire()
-        self.assertFalse(self.ui.visible or self.callbacks)
-        self.fire(team=2)
+        for team in (0, 1, 2):
+            self.fire(team=team)
+        self.assertEqual(len(self.parent.entries), 3)
+        self.assertEqual(len(self.terrain), 3)
+        self.assertEqual(len(self.callbacks), 3)
+        self.assertEqual(set(delay for delay, fn in self.callbacks.values()), {15.0})
+        self.assertEqual([ring.color for ring in self.terrain],
+                         [self.mod.ENEMY_COLOR, self.mod.ALLY_COLOR, self.mod.ENEMY_COLOR])
         self.warp()
-        self.assertFalse(self.ui.visible or self.callbacks)
-        self.fire(team=2)
-        self.plugin.stop()
-        self.assertFalse(self.ui.visible or self.callbacks)
+        self.assertFalse(self.parent.entries or self.callbacks or self.plugin._areas)
+        self.assertTrue(all(ring.destroyed for ring in self.terrain))
 
-    def test_warning_transport_failure_does_not_break_circles(self):
-        calls = []
-        def set_warning(visible):
-            calls.append(visible)
-            if visible: raise RuntimeError('Test Flash failure')
-        self.ui.set_warning = set_warning
+    def test_overlapping_enemy_areas_expire_independently(self):
         self.vehicle.position = self.position
         self.fire(team=2)
-        self.assertTrue(self.plugin._warning_failed)
-        self.assertFalse(self.ui.visible)
-        self.assertEqual(len(self.parent.entries),1)
-        self.assertEqual(len(self.terrain),1)
-        self.assertEqual(len(self.callbacks),1)
-        self.plugin._updateWarning()
-        self.assertEqual(calls,[True,False])
+        self.position = Vector(101, 5, -90)
+        self.fire(team=2)
+        self.assertEqual(len(self.callbacks), 2)
+        self.plugin._remove(1)
+        self.assertEqual(len(self.parent.entries), 1)
+        self.assertEqual(len(self.callbacks), 1)
+        self.plugin._remove(2)
+        self.assertFalse(self.parent.entries or self.callbacks)
+
+    def test_no_warning_ui_or_sound_dependencies(self):
+        code = compile(open(SOURCE, 'rb').read(), SOURCE, 'exec')
+        def names(code):
+            result = set(code.co_names)
+            for child in code.co_consts:
+                if isinstance(child, types.CodeType):
+                    result.update(names(child))
+            return result
+        self.assertFalse(names(code) & set(('nidin_recon_ui', 'warning_ui', 'SixthSenseIndicator',
+                                         'SoundGroups', 'inside_enemy_area', '_updateWarning')))
 
 if __name__ == '__main__':
     unittest.main()

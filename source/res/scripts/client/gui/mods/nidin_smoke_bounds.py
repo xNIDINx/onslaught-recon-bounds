@@ -129,16 +129,20 @@ class SmokeBounds(object):
         for key in sorted(self.circles):
             item = self.circles[key]
             params = item['params']
+            if now < params[1]:
+                delay = params[1]-now
+                next_delay = delay if next_delay is None else min(next_delay, delay)
+                continue
             radius = radius_at(params, now)
-            circles.append(params[0] + (radius, item['team']))
+            circles.append(params[0] + (radius, item['team'], params[1]))
             delay = min(UPDATE_INTERVAL, params[2]-now) if now < params[1]+params[5] else params[2]-now
             next_delay = delay if next_delay is None else min(next_delay, delay)
         player_team = getattr(BigWorld.player(), 'team', None)
         signature = (tuple(circles), player_team)
         if signature != self.signature:
-            from gui.mods.nidin_smoke_geometry import boundary_arcs, polylines_from_arcs
-            arcs = boundary_arcs(circles)
-            lines = polylines_from_arcs(arcs, step=1.0)
+            from gui.mods.nidin_smoke_geometry import priority_boundary_arcs, polylines_from_arcs
+            arcs = priority_boundary_arcs(circles)
+            lines = polylines_from_arcs(arcs, step=3.0)
             colors = {team: (UNKNOWN_COLOR if team == 0 or player_team not in (1,2)
                              else ALLY_COLOR if team == player_team else ENEMY_COLOR)
                       for team in (0,1,2)}
@@ -147,7 +151,7 @@ class SmokeBounds(object):
             except Exception:
                 LOG.exception('Cannot draw smoke minimap contour')
             try:
-                terrain_lines = polylines_from_arcs(arcs, step=3.0)
+                terrain_lines = lines
                 if self.terrain is None and terrain_lines:
                     from gui.mods.nidin_smoke_terrain import TerrainOutline
                     self.terrain = TerrainOutline()

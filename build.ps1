@@ -9,7 +9,7 @@ $packageDir = Join-Path $projectRoot 'build-artifacts\package'
 $modsDir = Join-Path $packageDir 'res\scripts\client\gui\mods'
 $distDir = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $modsDir,$distDir -Force | Out-Null
-$modules = @('mod_nidin_onslaught_recon','nidin_recon_ui','nidin_smoke_bounds','nidin_smoke_geometry','nidin_smoke_terrain','nidin_smoke_ui')
+$modules = @('mod_nidin_onslaught_recon','nidin_smoke_bounds','nidin_smoke_geometry','nidin_smoke_terrain','nidin_smoke_ui')
 foreach($module in $modules) {
     $source = Join-Path $projectRoot "source\res\scripts\client\gui\mods\$module.py"
     $bytecode = Join-Path $modsDir "$module.pyc"

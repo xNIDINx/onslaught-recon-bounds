@@ -5,7 +5,6 @@ import math
 from functools import partial, wraps
 
 import BigWorld
-from gui.mods import nidin_recon_ui as warning_ui
 from gui.mods.nidin_smoke_bounds import SmokeBounds
 import Math
 from CombatSelectedArea import DEFAULT_RADIUS_MODEL
@@ -14,13 +13,12 @@ from gui.Scaleform.daapi.view.battle.comp7.minimap import Comp7MinimapComponent
 from gui.Scaleform.daapi.view.battle.shared.minimap import common, settings
 
 LOG = logging.getLogger('nidin.onslaught_recon')
-VERSION = '1.2.5'
+VERSION = '1.2.8'
 PLUGIN_KEY = 'nidinReconBoundary'
 ALLY_COLOR = 0x54EFAC
 ENEMY_COLOR = 0xFF6659
 COLORBLIND_COLOR = 0xB69AFF
 MAX_AREAS = 64
-WARNING_INTERVAL = 0.1
 _instances = set()
 _original_setup = None
 _setup_wrapper = None
@@ -50,33 +48,6 @@ def area_parameters(equipment, level, end_time, now):
         return None
     return radius, remaining
 
-
-def inside_enemy_area(position, player_team, areas):
-    """Use the tank centre in the map plane, independently of terrain height."""
-    if player_team not in (1, 2):
-        return False
-    for item in areas:
-        # Team 0 is also used for enemy notifications by the current client;
-        # match the native recon minimap's comparison with the player's team.
-        if item['team'] is None or item['team'] == player_team:
-            continue
-        x, z = item['center']
-        if (position.x - x) ** 2 + (position.z - z) ** 2 <= item['radius'] ** 2:
-            return True
-    return False
-
-
-class ReconLamp(object):
-    """The bridge merges this warning with the native lamp independently."""
-    def __init__(self):
-        self.visible = False
-
-    def setVisible(self, visible):
-        warning_ui.set_warning(visible)
-        self.visible = bool(visible)
-
-    def destroy(self):
-        self.setVisible(False)
 
 class TerrainRing(object):
     """Own the model explicitly, including rollback after partial setup."""
@@ -145,9 +116,6 @@ class ReconBoundaryPlugin(common.SimplePlugin):
         self._areas = {}
         self._next_id = 0
         self._started = False
-        self._warning = None
-        self._warning_callback = None
-        self._warning_failed = False
         self._smoke = SmokeBounds(self, TerrainRing)
 
     def start(self):
@@ -162,10 +130,6 @@ class ReconBoundaryPlugin(common.SimplePlugin):
         g_replayEvents.onTimeWarpFinish += self._onTimeWarpFinish
         _instances.add(self)
         self._smoke.start()
-        try:
-            warning_ui.start()
-        except Exception:
-            LOG.exception('Cannot start warning UI')
 
     def stop(self):
         if self._controller is not None:
@@ -179,12 +143,9 @@ class ReconBoundaryPlugin(common.SimplePlugin):
             g_replayEvents.onTimeWarpFinish -= self._onTimeWarpFinish
         self._started = False
         self._smoke.stop()
-        self._clearWarning()
         for area_id in list(self._areas):
             self._remove(area_id)
         _instances.discard(self)
-        if not _instances:
-            warning_ui.stop()
         super(ReconBoundaryPlugin, self).stop()
 
     def _onTimeWarp(self, *args, **kwargs):
@@ -195,52 +156,6 @@ class ReconBoundaryPlugin(common.SimplePlugin):
     def _onTimeWarpFinish(self, *args, **kwargs):
         if self._started:
             self._smoke.start()
-
-    def _clearWarning(self):
-        if self._warning_callback is not None:
-            try:
-                BigWorld.cancelCallback(self._warning_callback)
-            except Exception:
-                LOG.exception('Cannot cancel warning update')
-            self._warning_callback = None
-        if self._warning is not None:
-            self._warning.destroy()
-            self._warning = None
-
-    def _tickWarning(self):
-        self._warning_callback = None
-        self._updateWarning()
-
-    def _updateWarning(self):
-        if self._warning_failed:
-            return
-        try:
-            player = BigWorld.player()
-            team = getattr(player, 'team', None)
-            enemies = [item for item in self._areas.values()
-                       if item['team'] is not None and item['team'] != team]
-            if not self._started or team not in (1, 2) or not enemies:
-                self._clearWarning()
-                return
-            vehicle = BigWorld.entities.get(getattr(player, 'playerVehicleID', 0))
-            input_handler = getattr(player, 'inputHandler', None)
-            visible = (bool(getattr(player, 'isVehicleAlive', False)) and
-                       vehicle is not None and getattr(vehicle, 'health', 0) > 0 and
-                       bool(getattr(input_handler, 'isGuiVisible', False)) and
-                       getattr(input_handler, 'ctrlModeName', None) != 'video' and
-                       inside_enemy_area(vehicle.position, team, enemies))
-            if visible and self._warning is None:
-                self._warning = ReconLamp()
-            if self._warning is not None:
-                self._warning.setVisible(visible)
-            if self._warning_callback is None:
-                self._warning_callback = BigWorld.callback(WARNING_INTERVAL, self._tickWarning)
-        except Exception:
-            # A graphics failure must not affect native events or repeatedly log
-            # at 10 Hz. Circle rendering continues independently until battle end.
-            self._warning_failed = True
-            self._clearWarning()
-            LOG.exception('Warning border disabled for this battle')
 
     def _color(self, team):
         if team == BigWorld.player().team:
@@ -310,7 +225,6 @@ class ReconBoundaryPlugin(common.SimplePlugin):
             except Exception:
                 self._remove(area_id)
                 raise
-            self._updateWarning()
         except Exception:
             LOG.exception('Recon notification failed')
 
@@ -339,14 +253,12 @@ class ReconBoundaryPlugin(common.SimplePlugin):
                 item['terrain'].destroy()
             except Exception:
                 LOG.exception('Cannot destroy terrain ring')
-        self._updateWarning()
 
 
 def install():
     global _original_setup, _setup_wrapper, _enabled
     if _enabled:
         return
-    warning_ui.install()
     _enabled = True
     if _setup_wrapper is not None:
         return
@@ -373,7 +285,6 @@ def uninstall():
             instance.stop()
         except Exception:
             LOG.exception('Cannot stop recon plugin')
-    warning_ui.uninstall()
     current = Comp7MinimapComponent._setupPlugins
     if getattr(current, 'im_func', current) is _setup_wrapper:
         Comp7MinimapComponent._setupPlugins = _original_setup
