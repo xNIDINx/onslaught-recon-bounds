@@ -17,7 +17,8 @@ class SmokeTests(unittest.TestCase):
         module('gui.Scaleform.daapi.view.battle.shared.minimap.settings')
         module('gui.mods.nidin_smoke_ui',set_contours=lambda *a:self.frames.append(a),clear=lambda:self.frames.append(None))
         geometry=imp.load_source('geometry_tested',os.path.join(SOURCE,'nidin_smoke_geometry.py'))
-        module('gui.mods.nidin_smoke_geometry',polylines=geometry.polylines)
+        module('gui.mods.nidin_smoke_geometry',boundary_arcs=geometry.boundary_arcs,
+               polylines_from_arcs=geometry.polylines_from_arcs)
         owner=self
         class Terrain(object):
             def update(self,*a):owner.terrain_frames.append(a)
@@ -55,6 +56,19 @@ class SmokeTests(unittest.TestCase):
         self.assertEqual(len(self.frames[-1][0]),1)
         self.smoke._onSmoke({3:self.args[:-1]+(1,)})
         self.assertEqual(len(self.frames[-1][0]),2)
+    def test_terrain_uses_three_meters_while_minimap_keeps_one(self):
+        self.now=102
+        self.smoke._onSmoke({1:self.args})
+        minimap=self.frames[-1][0]
+        terrain=self.terrain_frames[-1][0]
+        self.assertEqual(sum(len(p)-1 for team,p in minimap),236)
+        self.assertEqual(sum(len(p)-1 for team,p in terrain),79)
+        self.assertEqual(minimap[0][1][0],terrain[0][1][0])
+        self.assertEqual(minimap[0][1][-1],terrain[0][1][-1])
+        self.assertEqual(self.frames[-1][2],self.terrain_frames[-1][1])
+        self.now=120;self.tick()
+        self.assertEqual(self.frames[-1][0],[])
+        self.assertEqual(self.terrain_frames[-1][0],[])
     def test_duplicate_does_not_redraw_or_extend_expiry(self):
         self.smoke._onSmoke({1:self.args}); count=len(self.frames)
         self.now=105;self.tick(); count=len(self.frames)

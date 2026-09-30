@@ -46,9 +46,12 @@ def boundary_arcs(circles):
 
 
 def polylines(circles, step=1.0, max_segments=1024):
-    arcs = boundary_arcs(circles)
+    return polylines_from_arcs(boundary_arcs(circles), step, max_segments)
+
+
+def polylines_from_arcs(arcs, step=1.0, max_segments=1024):
     # Budget includes mandatory end points of each visible arc. Typical 7-cloud
-    # smoke uses about 250 segments. Increase step only for unusually large sets.
+    # smoke uses about 250 segments at 1 m. Increase step for large sets.
     def count(size):
         return sum(max(1, int(math.ceil((b-a)*c[3]/size))) for c,a,b in arcs)
     while count(step) > max_segments and len(arcs) < max_segments:

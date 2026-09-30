@@ -14,7 +14,7 @@ from gui.Scaleform.daapi.view.battle.comp7.minimap import Comp7MinimapComponent
 from gui.Scaleform.daapi.view.battle.shared.minimap import common, settings
 
 LOG = logging.getLogger('nidin.onslaught_recon')
-VERSION = '1.2.4'
+VERSION = '1.2.5'
 PLUGIN_KEY = 'nidinReconBoundary'
 ALLY_COLOR = 0x54EFAC
 ENEMY_COLOR = 0xFF6659

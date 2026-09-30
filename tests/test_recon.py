@@ -102,7 +102,8 @@ class ReconTests(unittest.TestCase):
         module('items.vehicles', g_cache=Obj(equipments=lambda:{}))
         module('gui.mods.nidin_smoke_ui', clear=lambda:None, set_contours=lambda *a:None)
         geometry = imp.load_source('geometry_tested', os.path.join(os.path.dirname(SOURCE), 'nidin_smoke_geometry.py'))
-        module('gui.mods.nidin_smoke_geometry', polylines=geometry.polylines)
+        module('gui.mods.nidin_smoke_geometry', boundary_arcs=geometry.boundary_arcs,
+               polylines_from_arcs=geometry.polylines_from_arcs)
         module('gui.mods.nidin_smoke_terrain', TerrainOutline=lambda:Obj(update=lambda *a:None,destroy=lambda:None))
         module('CombatSelectedArea', DEFAULT_RADIUS_MODEL='native.visual')
         self.warp_finish = Event()
