@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import imp, os, sys, unittest
 from test_recon import Obj, Parent, SimplePlugin, module
-SOURCE=os.path.join(os.path.dirname(__file__),'../source/res/scripts/client/gui/mods')
+SOURCE=os.path.join(os.path.dirname(__file__),'../source/res/scripts/client/gui/mods/nidin_smoke')
 
 class SmokeTests(unittest.TestCase):
     def setUp(self):
@@ -15,17 +15,17 @@ class SmokeTests(unittest.TestCase):
         module('constants',ARENA_SYNC_OBJECTS=Obj(SMOKE=7))
         module('items.vehicles',g_cache=Obj(equipments=lambda:{9403:self.equip}))
         module('gui.Scaleform.daapi.view.battle.shared.minimap.settings')
-        module('gui.mods.nidin_smoke_ui',set_contours=lambda *a:self.frames.append(a),clear=lambda:self.frames.append(None))
-        geometry=imp.load_source('geometry_tested',os.path.join(SOURCE,'nidin_smoke_geometry.py'))
-        module('gui.mods.nidin_smoke_geometry',boundary_arcs=geometry.boundary_arcs,
+        module('gui.mods.nidin_smoke.ui',set_contours=lambda *a:self.frames.append(a),clear=lambda:self.frames.append(None))
+        geometry=imp.load_source('geometry_tested',os.path.join(SOURCE,'geometry.py'))
+        module('gui.mods.nidin_smoke.geometry',boundary_arcs=geometry.boundary_arcs,
                priority_boundary_arcs=geometry.priority_boundary_arcs,
                polylines_from_arcs=geometry.polylines_from_arcs)
         owner=self
         class Terrain(object):
             def update(self,*a):owner.terrain_frames.append(a)
             def destroy(self):owner.destroyed+=1
-        module('gui.mods.nidin_smoke_terrain',TerrainOutline=Terrain)
-        self.mod=imp.load_source('smoke_tested',os.path.join(SOURCE,'nidin_smoke_bounds.py'))
+        module('gui.mods.nidin_smoke.terrain',TerrainOutline=Terrain)
+        self.mod=imp.load_source('smoke_tested',os.path.join(SOURCE,'bounds.py'))
         self.mod.LOG.disabled=True
         self.smoke=self.mod.SmokeBounds(SimplePlugin(Parent()))
         self.smoke.start()

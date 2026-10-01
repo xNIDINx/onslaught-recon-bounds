@@ -55,8 +55,8 @@ class SmokeBounds(object):
     def start(self):
         if self.system is not None:
             return
-        from gui.mods import nidin_smoke_ui
-        self.ui = nidin_smoke_ui
+        from gui.mods.nidin_smoke import ui
+        self.ui = ui
         arena = getattr(BigWorld.player(), 'arena', None)
         self.system = getattr(arena, 'componentSystem', None)
         if self.system is not None:
@@ -140,7 +140,7 @@ class SmokeBounds(object):
         player_team = getattr(BigWorld.player(), 'team', None)
         signature = (tuple(circles), player_team)
         if signature != self.signature:
-            from gui.mods.nidin_smoke_geometry import priority_boundary_arcs, polylines_from_arcs
+            from gui.mods.nidin_smoke.geometry import priority_boundary_arcs, polylines_from_arcs
             arcs = priority_boundary_arcs(circles)
             lines = polylines_from_arcs(arcs, step=3.0)
             colors = {team: (UNKNOWN_COLOR if team == 0 or player_team not in (1,2)
@@ -153,7 +153,7 @@ class SmokeBounds(object):
             try:
                 terrain_lines = lines
                 if self.terrain is None and terrain_lines:
-                    from gui.mods.nidin_smoke_terrain import TerrainOutline
+                    from gui.mods.nidin_smoke.terrain import TerrainOutline
                     self.terrain = TerrainOutline()
                 if self.terrain is not None:
                     self.terrain.update(terrain_lines, colors)

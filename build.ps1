@@ -9,10 +9,11 @@ $packageDir = Join-Path $projectRoot 'build-artifacts\package'
 $modsDir = Join-Path $packageDir 'res\scripts\client\gui\mods'
 $distDir = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $modsDir,$distDir -Force | Out-Null
-$modules = @('mod_nidin_onslaught_recon','nidin_smoke_bounds','nidin_smoke_geometry','nidin_smoke_terrain','nidin_smoke_ui')
+$modules = @('mod_nidin_onslaught_recon','nidin_smoke/__init__','nidin_smoke/bounds','nidin_smoke/geometry','nidin_smoke/terrain','nidin_smoke/ui')
 foreach($module in $modules) {
     $source = Join-Path $projectRoot "source\res\scripts\client\gui\mods\$module.py"
     $bytecode = Join-Path $modsDir "$module.pyc"
+    New-Item -ItemType Directory -Path (Split-Path -Parent $bytecode) -Force | Out-Null
     & $python -B -c 'import py_compile,sys; assert sys.version_info[:2] == (2,7); py_compile.compile(sys.argv[1],cfile=sys.argv[2],dfile=sys.argv[3],doraise=True)' $source $bytecode "$module.py"
     if($LASTEXITCODE -ne 0) { throw "Python 2.7 compilation failed: $module" }
 }

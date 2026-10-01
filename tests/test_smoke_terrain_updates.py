@@ -8,7 +8,7 @@ import unittest
 
 
 SOURCE = os.path.join(os.path.dirname(__file__),
-                      '../source/res/scripts/client/gui/mods')
+                      '../source/res/scripts/client/gui/mods/nidin_smoke')
 
 
 class Matrix(object):
@@ -149,7 +149,7 @@ class TerrainUpdateTests(unittest.TestCase):
                Vector3=lambda *values: values)
         module('ResMgr', openSection=lambda path: Section())
         self.mod = imp.load_source('smoke_terrain_tested',
-                                  os.path.join(SOURCE, 'nidin_smoke_terrain.py'))
+                                  os.path.join(SOURCE, 'terrain.py'))
         self.saved_log_disabled = self.mod.LOG.disabled
         self.mod.LOG.disabled = True
         self.outline = self.mod.TerrainOutline()

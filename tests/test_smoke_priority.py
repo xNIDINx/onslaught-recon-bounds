@@ -5,7 +5,7 @@ import random
 import unittest
 
 g = imp.load_source('priority_geometry', os.path.join(os.path.dirname(__file__),
-    '../source/res/scripts/client/gui/mods/nidin_smoke_geometry.py'))
+    '../source/res/scripts/client/gui/mods/nidin_smoke/geometry.py'))
 
 
 def disk(x=0, z=0, r=10, team=1, time=100):

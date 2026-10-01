@@ -97,12 +97,12 @@ class ReconTests(unittest.TestCase):
         module('Math', Vector2=Vector, Vector3=Vector, Matrix=Matrix)
         module('constants', ARENA_SYNC_OBJECTS=Obj(SMOKE=7))
         module('items.vehicles', g_cache=Obj(equipments=lambda:{}))
-        module('gui.mods.nidin_smoke_ui', clear=lambda:None, set_contours=lambda *a:None)
-        geometry = imp.load_source('geometry_tested', os.path.join(os.path.dirname(SOURCE), 'nidin_smoke_geometry.py'))
-        module('gui.mods.nidin_smoke_geometry', boundary_arcs=geometry.boundary_arcs,
+        module('gui.mods.nidin_smoke.ui', clear=lambda:None, set_contours=lambda *a:None)
+        geometry = imp.load_source('geometry_tested', os.path.join(os.path.dirname(SOURCE), 'nidin_smoke', 'geometry.py'))
+        module('gui.mods.nidin_smoke.geometry', boundary_arcs=geometry.boundary_arcs,
                priority_boundary_arcs=geometry.priority_boundary_arcs,
                polylines_from_arcs=geometry.polylines_from_arcs)
-        module('gui.mods.nidin_smoke_terrain', TerrainOutline=lambda:Obj(update=lambda *a:None,destroy=lambda:None))
+        module('gui.mods.nidin_smoke.terrain', TerrainOutline=lambda:Obj(update=lambda *a:None,destroy=lambda:None))
         module('CombatSelectedArea', DEFAULT_RADIUS_MODEL='native.visual')
         self.warp_finish = Event()
         module('ReplayEvents', g_replayEvents=Obj(onTimeWarpStart=self.warp,onTimeWarpFinish=self.warp_finish))
@@ -110,8 +110,8 @@ class ReconTests(unittest.TestCase):
         module('gui.Scaleform.daapi.view.battle.shared.minimap.common', SimplePlugin=SimplePlugin)
         module('gui.Scaleform.daapi.view.battle.shared.minimap.settings',
                TRANSFORM_FLAG=Obj(DEFAULT=7, NO_ROTATION=2))
-        smoke = imp.load_source('smoke_under_test', os.path.join(os.path.dirname(SOURCE), 'nidin_smoke_bounds.py'))
-        module('gui.mods.nidin_smoke_bounds', SmokeBounds=smoke.SmokeBounds)
+        smoke = imp.load_source('smoke_under_test', os.path.join(os.path.dirname(SOURCE), 'nidin_smoke', 'bounds.py'))
+        module('gui.mods.nidin_smoke.bounds', SmokeBounds=smoke.SmokeBounds)
         self.mod = imp.load_source('recon_under_test', SOURCE)
         self.mod.LOG.disabled = True
         self.terrain = []

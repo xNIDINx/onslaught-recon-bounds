@@ -1,6 +1,6 @@
 <root>
     <id>nidin.onslaught_recon_bounds</id>
-    <version>1.2.8</version>
+    <version>1.2.9</version>
     <name>Индикация авиаразведки и дымов в Натиске</name>
     <description>Границы самолёта и границы союзных и вражеских дымов на миникарте и местности.</description>
 </root>

@@ -3,7 +3,7 @@
 Мод для «Мира танков», который показывает границы авиаразведки и дымовых завес
 в режиме «Натиск».
 
-**Версия: 1.2.8 · Проверенный клиент: RU 1.45.0.0 · Автор: NIDIN**
+**Версия: 1.2.9 · Проверенный клиент: RU 1.45.0.0 · Автор: NIDIN**
 
 [Скачать мод](https://github.com/xNIDINx/onslaught-recon-bounds/releases/latest) ·
 [Страница модов на nidin.ru](https://nidin.ru/mods)
@@ -37,9 +37,15 @@
 
 ## Установка
 
-1. Закрой игру и скачай `nidin.onslaught_recon_bounds_1.2.8.mtmod`
-   из [релиза 1.2.8](https://github.com/xNIDINx/onslaught-recon-bounds/releases/tag/v1.2.8).
+1. Закрой игру и скачай `nidin.onslaught_recon_bounds_1.2.9.mtmod`
+   из [релиза 1.2.9](https://github.com/xNIDINx/onslaught-recon-bounds/releases/tag/v1.2.9).
 2. Удали прежнюю версию этого мода из папки `mods/1.45.0.0` клиента.
 3. Скопируй скачанный `.mtmod` в `mods/1.45.0.0` и запусти игру.
 
 Для удаления закрой игру и убери этот `.mtmod` из папки модов.
+
+## Исходники
+
+Входной модуль — `source/res/scripts/client/gui/mods/mod_nidin_onslaught_recon.py`.
+Модули дымов находятся в пакете `gui/mods/nidin_smoke`: `bounds.py`, `geometry.py`,
+`terrain.py`, `ui.py` и `__init__.py`.

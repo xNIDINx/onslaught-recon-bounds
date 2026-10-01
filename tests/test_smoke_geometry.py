@@ -1,7 +1,38 @@
-import imp, os, math, unittest
-g = imp.load_source('smoke_geometry', os.path.join(os.path.dirname(__file__), '../source/res/scripts/client/gui/mods/nidin_smoke_geometry.py'))
+import imp, importlib, os, math, sys, types, unittest
+MODS_SOURCE = os.path.abspath(os.path.join(os.path.dirname(__file__),
+    '../source/res/scripts/client/gui/mods'))
+g = imp.load_source('smoke_geometry', os.path.join(MODS_SOURCE, 'nidin_smoke', 'geometry.py'))
 
 class GeometryTests(unittest.TestCase):
+    def test_python27_import_resolves_real_package_and_geometry(self):
+        saved = dict(sys.modules)
+        try:
+            # Only the game-owned parents are substituted. Python must find
+            # the real __init__.py and geometry.py using its package importer.
+            gui = types.ModuleType('gui')
+            gui.__path__ = [os.path.dirname(MODS_SOURCE)]
+            mods = types.ModuleType('gui.mods')
+            mods.__path__ = [MODS_SOURCE]
+            gui.mods = mods
+            sys.modules['gui'] = gui
+            sys.modules['gui.mods'] = mods
+            prefix = 'gui.mods.nidin_smoke'
+            for name in list(sys.modules):
+                if name == prefix or name.startswith(prefix + '.'):
+                    del sys.modules[name]
+            geometry = importlib.import_module(prefix + '.geometry')
+            package = sys.modules[prefix]
+            self.assertEqual(os.path.splitext(os.path.abspath(package.__file__))[0],
+                             os.path.join(MODS_SOURCE, 'nidin_smoke', '__init__'))
+            self.assertEqual(geometry.__name__, prefix + '.geometry')
+            self.assertIs(geometry, importlib.import_module(prefix + '.geometry'))
+            lines = geometry.polylines([(0,0,0,37.5,1)], step=3.0)
+            self.assertEqual(sum(len(points)-1 for team,points in lines), 79)
+        finally:
+            for name in set(sys.modules) - set(saved):
+                del sys.modules[name]
+            sys.modules.update(saved)
+
     def test_single_circle(self):
         arcs=g.boundary_arcs([(0,0,0,10,1)])
         self.assertEqual(len(arcs),1)
